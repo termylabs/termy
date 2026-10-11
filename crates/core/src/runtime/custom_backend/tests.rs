@@ -317,6 +317,34 @@ fn synchronized_output_commits_after_deadline_without_more_input() {
     assert_eq!(terminal.snapshot().cells[0].char, 'd');
 }
 
+#[test]
+fn terminal_input_commits_a_pending_synchronized_frame() {
+    let terminal = display(20, 2);
+    terminal.feed_output(b"\x1b[?2026hvisible-before-input");
+    assert_eq!(terminal.snapshot().cells[0].char, ' ');
+
+    terminal.write(b"x");
+
+    let frame: String = terminal
+        .snapshot()
+        .cells
+        .into_iter()
+        .map(|cell| cell.char)
+        .collect();
+    assert!(frame.starts_with("visible-before-input"));
+    assert!(terminal.shared.state().engine.modes().synchronized_update);
+
+    terminal.feed_output(b"later\x1b[?2026l");
+    let frame: String = terminal
+        .snapshot()
+        .cells
+        .into_iter()
+        .map(|cell| cell.char)
+        .collect();
+    assert!(frame.starts_with("visible-before-inputlater"));
+    assert!(!terminal.shared.state().engine.modes().synchronized_update);
+}
+
 #[cfg(unix)]
 #[test]
 fn native_exit_commits_synchronized_tail_before_exit_event() {
