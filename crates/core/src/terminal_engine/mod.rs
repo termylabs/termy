@@ -170,6 +170,21 @@ impl Engine {
         true
     }
 
+    /// Commit the currently staged synchronized frame while preserving the
+    /// application's synchronized-output mode for its next frame.
+    pub fn flush_synchronized_update(&mut self) -> bool {
+        let was_active = self.state.modes.synchronized_update;
+        let saved_mode = self.state.saved_private_mode(2026);
+        if !self.stop_synchronized_update() {
+            return false;
+        }
+        if was_active {
+            self.synchronized_update.begin(Instant::now(), saved_mode);
+            self.state.modes.synchronized_update = true;
+        }
+        true
+    }
+
     /// Current OSC 7501 records, oldest update first, with inherited apps resolved.
     pub fn program_status(&self) -> Vec<crate::ProgramStatusRecord> {
         self.state.program_status.snapshot()
